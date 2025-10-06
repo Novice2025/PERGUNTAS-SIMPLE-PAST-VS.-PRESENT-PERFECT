@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English WH-Question Builder: Simple Past vs. Present Perfect</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'dark-bg': '#1A1A2E',
+                        'card-bg': '#272740',
+                        'wh-color': '#06B6D4',        
+                        'aux-color': '#9333EA',       
+                        'subject-color': '#FBBF24',   
+                        'rest-color': '#34D399',      
+                        'perfect-color': '#F59E0B',   /* Orange for Present Perfect */
+                        'simple-past-color': '#EF4444', /* Red for Simple Past (Did) */
+                    },
+                    keyframes: {
+                        pulse: {
+                            '0%, 100%': { opacity: 1, boxShadow: '0 0 0 0 rgba(147, 51, 234, 0.4)' },
+                            '50%': { opacity: 0.8, boxShadow: '0 0 0 4px rgba(147, 51, 234, 0)' },
+                        }
+                    },
+                    animation: {
+                        pulse: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --dark-bg: #1A1A2E;
+            --card-bg: #272740;
+            --wh-color: #06B6D4;
+            --aux-color: #9333EA; 
+            --subject-color: #FBBF24; 
+            --rest-color: #34D399; 
+            --perfect-color: #F59E0B;
+            --simple-past-color: #EF4444;
+        }
+        body {
+            background-color: var(--dark-bg);
+            color: #E2E8F0;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Custom block styling */
+        .lego-block {
+            padding: 0.75rem 1.25rem;
+            margin: 0.25rem;
+            border-radius: 0.5rem;
+            font-weight: 700;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s, opacity 0.3s, box-shadow 0.3s;
+            user-select: none;
+            flex-shrink: 0;
+            border: 2px solid transparent; 
+        }
+        
+        .lego-block[draggable="true"] { cursor: pointer !important; opacity: 1; }
+        .lego-block[draggable="true"]:hover { transform: translateY(-2px); opacity: 0.9; }
+        .lego-block[draggable="false"] { cursor: not-allowed; opacity: 0.4; }
+
+        .wh-block { background-color: var(--wh-color); color: #1A1A2E; } 
+        .aux-block { background-color: var(--aux-color); color: white; }
+        .subject-block { background-color: var(--subject-color); color: #1A1A2E; }
+        .rest-block { background-color: var(--rest-color); color: #1A1A2E; } 
+        
+        /* Slot styling */
+        .target-slot {
+            min-width: 80px;
+            min-height: 70px; 
+            margin: 0.25rem;
+            border: 2px dashed #475569;
+            background-color: #1F2937;
+            border-radius: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, border-color 0.2s;
+            position: relative;
+            padding-top: 20px;
+        }
+        .slot-label {
+            position: absolute;
+            top: 5px;
+            font-size: 0.75rem; 
+            font-weight: 700;
+            opacity: 0.7;
+            text-transform: uppercase;
+        }
+        .target-slot[data-role="wh"] .slot-label { color: var(--wh-color); } 
+        .target-slot[data-role="aux"] .slot-label { color: var(--aux-color); }
+        .target-slot[data-role="subj"] .slot-label { color: var(--subject-color); }
+        .target-slot[data-role="rest"] .slot-label { color: var(--rest-color); }
+        .target-slot[data-role="punct"] .slot-label { color: #6B7280; }
+        
+        /* Focus styles */
+        .target-slot.active {
+            border-color: var(--wh-color);
+            background-color: #1F2937;
+        }
+
+        .target-slot > .lego-block {
+            margin: 0;
+            box-shadow: none;
+            cursor: default;
+        }
+        
+        .scrambled-words {
+            min-height: 100px;
+            border: 3px solid #4B5563;
+            border-radius: 0.75rem;
+            padding: 0.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feedback.success { background-color: #166534; color: white; }
+        .feedback.error { background-color: #991B1B; color: white; }
+
+        .pulse-active {
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .tab-button {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 700;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .tab-button.active {
+            border-color: #E2E8F0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 1024px) {
+            .main-content { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="text-center mb-10">
+        <h1 class="hero-title text-4xl md:text-5xl font-extrabold text-white mb-2">
+            AUXILIARES EM PERGUNTAS: SIMPLE PAST VS. PRESENT PERFECT
+        </h1>
+        <p class="text-lg text-gray-400">
+            Foque na distinção: **Did** (tempo específico) vs. **Have/Has** (experiência/relevância).
+        </p>
+    </header>
+    
+    <div class="max-w-7xl mx-auto w-full grid gap-8 grid-cols-1 lg:grid-cols-3 main-content">
+
+        <!-- Left Column: Instructions and Selector -->
+        <div class="lg:col-span-1 space-y-8">
+            <div class="rule-card p-6 rounded-xl shadow-lg border-2 border-gray-600">
+                <p class="text-xl font-extrabold flex items-center mb-3 text-white"><span class="text-3xl font-black mr-2 text-gray-500">★</span> ESTRUTURA DA PERGUNTA</p>
+                <div class="rule-box mb-4 bg-gray-900">
+                    <p class="text-sm text-gray-400 mb-2">A ordem correta para WH-Questions é sempre a mesma:</p>
+                    <div class="flex flex-wrap items-center text-base font-bold justify-center md:justify-start">
+                        <div class="lego-block wh-block">1. WH-WORD</div>
+                        <span class="text-xl mx-1 font-black text-gray-500">→</span>
+                        <div class="lego-block aux-block">2. AUX/BE/DO</div>
+                        <span class="text-xl mx-1 font-black text-gray-500">→</span>
+                        <div class="lego-block subject-block">3. SUJEITO</div>
+                        <span class="text-xl mx-1 font-black text-gray-500">→</span>
+                        <div class="lego-block rest-block">4+. RESTO (?)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tense Explanation focused only on the two tenses -->
+            <div class="p-6 rounded-xl shadow-lg border-2 border-perfect-color mt-4 bg-card-bg">
+                <h3 class="font-bold text-2xl text-perfect-color mb-3">Simple Past vs. Present Perfect</h3>
+                <p class="text-base text-gray-300 mb-3">A chave para o uso nativo é o **foco** da sua pergunta:</p>
+                
+                <div class="space-y-4">
+                    <div class="p-3 bg-simple-past-color/20 border-l-4 border-simple-past-color rounded">
+                        <p class="font-bold text-lg text-simple-past-color mb-1">Simple Past (Aux: Did)</p>
+                        <p class="text-sm text-gray-200">Pergunta sobre ações **encerradas em um tempo específico** no passado. *O foco é: QUANDO?*</p>
+                        <p class="text-xs text-gray-400 mt-1 font-semibold">Ex: **When did** you leave **yesterday**?</p>
+                    </div>
+                    <div class="p-3 bg-perfect-color/20 border-l-4 border-perfect-color rounded">
+                        <p class="font-bold text-lg text-perfect-color mb-1">Present Perfect (Aux: Have/Has)</p>
+                        <p class="text-sm text-gray-200">Pergunta sobre **experiência ou resultado** que afeta o presente. *O foco é: O QUE/COMO/POR QUANTO TEMPO?*</p>
+                        <p class="text-xs text-gray-400 mt-1 font-semibold">Ex: **What have** you **ever** read?</p>
+                    </div>
+                </div>
+            </div>
+            <!-- END Tense Explanation -->
+
+
+            <h2 class="text-3xl font-extrabold text-white border-b pb-2 border-gray-600 mt-8">SELECIONE O TÓPICO:</h2>
+            <div id="topic-selector" class="flex flex-wrap gap-3">
+                <button data-topic="perfect" class="tab-button bg-perfect-color text-white">Present Perfect (Have/Has)</button>
+                <button data-topic="do_aux" class="tab-button bg-simple-past-color text-white">Simple Past (Did)</button>
+            </div>
+            
+            <div class="rule-card p-6 rounded-xl shadow-lg mt-4" id="aux-selector-area">
+                <h3 class="font-bold text-xl text-white mb-3">Selecione o Auxiliar:</h3>
+                <div id="aux-selector" class="flex flex-wrap gap-3">
+                    <!-- Auxiliar buttons will be generated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Interactive Practice (Main Area) -->
+        <div class="lg:col-span-2" id="practice-target-area">
+            <div class="bg-card-bg p-8 rounded-xl shadow-2xl min-h-[500px]">
+                <h2 class="text-3xl font-bold text-wh-color mb-4">Área de Montagem: WH-Questions</h2>
+                
+                <!-- CONCISE INSTRUCTIONS BLOCK -->
+                <div class="p-4 mb-6 rounded-lg bg-yellow-900/50 border-2 border-yellow-400">
+                    <h3 class="font-extrabold text-xl text-yellow-400 mb-2">Instruções Rápidas:</h3>
+                    <ol class="list-decimal list-inside space-y-1 text-white text-base">
+                        <li>**1º PASSO:** Escolha um **Tópico** (Did ou Have/Has).</li>
+                        <li>**2º PASSO:** Monte a pergunta na ordem: **WH-WORD → AUXILIAR → SUJEITO → RESTO.**</li>
+                        <li>**LEMBRETE VITAL:** Com **Did**, o verbo principal é sempre na **forma base** (ex: *do*). Com **Have/Has**, o verbo principal é sempre no **particípio passado** (ex: *done*).</li>
+                    </ol>
+                </div>
+
+                <p class="text-lg font-semibold mb-2 mt-6">Frase Afirmativa (Contexto):</p>
+                <div id="affirmative-sentence" class="p-4 rounded-lg text-xl font-semibold bg-gray-700 text-white mb-6">
+                    Clique em um **Tópico** e depois em um **Auxiliar** para começar o desafio!
+                </div>
+                
+                <p class="text-lg font-semibold mb-2 mt-6">
+                    Monte a Pergunta (Passo a Passo - Slot Ativo Pulsa!): 
+                    <span class="text-yellow-400 font-bold ml-2">(Clique ou Arraste o bloco pulsante!)</span>
+                </p>
+                <div id="sentence-input-area" class="sentence-input-area flex flex-wrap mb-6">
+                    <!-- Target slots will be generated here -->
+                </div>
+
+                <p class="text-lg font-semibold mb-2 mt-6">Arraste/Clique nos Blocos (Lego Misturado):</p>
+                <div id="scrambled-words" class="scrambled-words mb-6">
+                    <!-- Scrambled word blocks will be generated here -->
+                </div>
+
+                <div class="flex flex-wrap gap-4">
+                    <button id="check-button" class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition-colors disabled:opacity-50" disabled>
+                        Verificar Resposta Final
+                    </button>
+                    <button id="next-button" class="px-6 py-3 bg-aux-color text-white font-bold rounded-lg shadow-md hover:bg-purple-700 transition-colors disabled:opacity-50" disabled>
+                        Próxima Frase
+                    </button>
+                </div>
+
+                <div id="feedback" class="feedback hidden"></div>
+                <div id="solution" class="mt-4 p-4 bg-gray-700 rounded-lg hidden">
+                    <p class="font-bold text-sm text-gray-300 mb-2">Solução Correta:</p>
+                    <p id="solution-text" class="text-xl font-bold text-rest-color"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-10 text-center text-sm text-gray-600">
+        Pratique a estrutura: WH-WORD + AUXILIAR/BE/DO + SUJEITO + RESTO + ?.
+    </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        
+        // --- Firebase Initialization (Boilerplate) ---
+        const initializeFirebase = async (callback) => {
+            try {
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                if (firebaseConfig) {
+                    const app = initializeApp(firebaseConfig);
+                    const auth = getAuth(app);
+
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                }
+            } catch (error) {
+                console.error("Firebase init error (non-critical for this app):", error);
+            }
+            if (callback) callback();
+        };
+
+        // --- APPLICATION DATA (FOCUSED ON PAST VS PERFECT) ---
+        const sentenceData = {
+            // 1. PRESENT PERFECT (Relevance, Experience, Unspecified Time)
+            perfect: [
+                { whWord: "What", aux: "have", subj: "They", rest: "finished recently?", statement: "They have finished the report recently." }, 
+                { whWord: "Who", aux: "has", subj: "She", rest: "met in her life?", statement: "She has met many famous people." },
+                { whWord: "How long", aux: "have", subj: "You", rest: "worked here?", statement: "I have worked here for five years." },
+                { whWord: "Where", aux: "have", subj: "We", rest: "eaten already?", statement: "We have eaten at the new restaurant already." },
+            ],
+            // 2. SIMPLE PAST (Specific Time Marker REQUIRED)
+            do_aux: [
+                { whWord: "When", aux: "did", subj: "They", rest: "finish the report?", statement: "They finished the report last night." },
+                { whWord: "Where", aux: "did", subj: "She", rest: "meet the CEO yesterday?", statement: "She met the CEO at the conference yesterday." },
+                { whWord: "Why", aux: "did", subj: "He", rest: "leave five minutes ago?", statement: "He left five minutes ago because he was tired." },
+                { whWord: "What", aux: "did", subj: "You", rest: "eat for lunch?", statement: "I ate a sandwich for lunch." },
+            ],
+        };
+        
+        const auxiliaryMap = {
+            perfect: [
+                { form: 'have', color: 'bg-perfect-color' }, 
+                { form: 'has', color: 'bg-perfect-color' } 
+            ],
+            do_aux: [ 
+                { form: 'did', color: 'bg-simple-past-color' } // Only 'did' for past comparison
+            ]
+        };
+
+        let currentTopic = null;
+        let currentAuxForm = null;
+        let currentQuestionIndex = -1;
+        let currentWords = []; 
+        let nextSlotIndex = 0; 
+
+        // DOM Elements
+        const auxSelectorDiv = document.getElementById('aux-selector');
+        const affSentence = document.getElementById('affirmative-sentence');
+        const sentenceInputArea = document.getElementById('sentence-input-area');
+        const scrambledWordsDiv = document.getElementById('scrambled-words');
+        const checkButton = document.getElementById('check-button');
+        const nextButton = document.getElementById('next-button');
+        const feedbackDiv = document.getElementById('feedback');
+        const solutionDiv = document.getElementById('solution');
+        const solutionText = document.getElementById('solution-text');
+        const practiceTargetArea = document.getElementById('practice-target-area');
+        const topicButtons = document.querySelectorAll('#topic-selector .tab-button');
+        
+        // --- Core Action: Moving a block from source to target ---
+        function moveBlockToSlot(draggedBlock) {
+             const slotIndex = nextSlotIndex;
+             const targetSlot = sentenceInputArea.querySelector(`.target-slot[data-slot-index="${slotIndex}"]`);
+
+             if (parseInt(draggedBlock.dataset.correctIndex) !== nextSlotIndex) {
+                 return;
+             }
+
+             if (!targetSlot || targetSlot.querySelector('.lego-block')) return;
+
+             // 1. Clean up visual cues
+             targetSlot.classList.remove('active', 'pulse-active');
+             feedbackDiv.classList.add('hidden'); 
+             
+             // 2. Move block
+             draggedBlock.setAttribute('draggable', 'false'); 
+             draggedBlock.classList.remove('pulse-active'); 
+             targetSlot.appendChild(draggedBlock);
+
+             // 3. Advance state
+             nextSlotIndex++;
+             updateActiveSlot();
+             
+             // 4. Final check
+             if (nextSlotIndex >= currentWords.length) {
+                 checkButton.disabled = false;
+                 scrambledWordsDiv.innerHTML = '<p class="text-lg text-gray-400">Todos os blocos estão nos seus lugares! Verifique sua resposta final.</p>';
+             }
+        }
+
+        // --- Drag and Drop Handlers (Kept the same) ---
+        
+        function handleDragStart(e) {
+            const draggedBlock = e.target;
+            if (draggedBlock.getAttribute('draggable') === 'true') {
+                e.dataTransfer.setData('text/plain', draggedBlock.dataset.correctIndex); 
+                e.dataTransfer.effectAllowed = 'move';
+                draggedBlock.classList.add('ring-4', 'ring-cyan-500', 'opacity-50'); 
+            } else { e.preventDefault(); }
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('ring-4', 'ring-cyan-500', 'opacity-50');
+            if (e.target.parentNode === scrambledWordsDiv) {
+                const currentActiveSlot = sentenceInputArea.querySelector(`.target-slot[data-slot-index="${nextSlotIndex}"]`);
+                if (currentActiveSlot) currentActiveSlot.classList.add('pulse-active');
+            }
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault(); 
+            const slot = e.currentTarget;
+            const slotIndex = parseInt(slot.dataset.slotIndex);
+            
+            if (slotIndex === nextSlotIndex && !slot.querySelector('.lego-block')) {
+                e.dataTransfer.dropEffect = 'move';
+                slot.classList.add('active', 'border-cyan-300'); 
+            } else {
+                e.dataTransfer.dropEffect = 'none';
+                slot.classList.remove('active', 'border-cyan-300');
+            }
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('active', 'border-cyan-300');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const slot = e.currentTarget;
+            const slotIndex = parseInt(slot.dataset.slotIndex);
+
+            if (slotIndex !== nextSlotIndex || slot.querySelector('.lego-block')) {
+                 slot.classList.add('pulse-active'); return;
+            } 
+
+            const draggedIndex = e.dataTransfer.getData('text/plain');
+            const draggedBlock = scrambledWordsDiv.querySelector(`.lego-block[data-correct-index='${draggedIndex}']`);
+            
+            if (draggedBlock) moveBlockToSlot(draggedBlock);
+        }
+
+        function handleBlockClick(e) {
+            const clickedBlock = e.currentTarget;
+            const blockIndex = parseInt(clickedBlock.dataset.correctIndex);
+            
+            if (blockIndex === nextSlotIndex) moveBlockToSlot(clickedBlock);
+        }
+
+        function updateActiveSlot() {
+            sentenceInputArea.querySelectorAll('.target-slot').forEach(slot => {
+                slot.classList.remove('active', 'pulse-active');
+                slot.addEventListener('drop', handleDrop);
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('dragleave', handleDragLeave);
+            });
+
+            document.querySelectorAll('#scrambled-words .lego-block').forEach(block => {
+                block.setAttribute('draggable', 'false'); 
+                block.classList.remove('pulse-active'); 
+            });
+
+
+            if (nextSlotIndex < currentWords.length) {
+                const nextSlot = sentenceInputArea.querySelector(`.target-slot[data-slot-index="${nextSlotIndex}"]`);
+                if (nextSlot) {
+                    nextSlot.classList.add('active', 'pulse-active');
+                    const requiredBlock = scrambledWordsDiv.querySelector(`.lego-block[data-correct-index="${nextSlotIndex}"]`);
+                    
+                    if (requiredBlock) {
+                        requiredBlock.setAttribute('draggable', 'true'); 
+                        requiredBlock.classList.add('pulse-active');
+                    }
+                }
+            }
+        }
+        
+        // --- Sentence Tokenization ---
+        
+        function tokenizeSentence(item) {
+            let tokens = [];
+            
+            // 1. WH-Word (Capitalized)
+            tokens.push(item.whWord); 
+            
+            // 2. Auxiliary (Lowercased)
+            tokens.push(item.aux); 
+
+            // 3. Subject (Capitalized/Name/Pronoun)
+            tokens.push(item.subj); 
+            
+            // 4. REST
+            const restClean = item.rest.replace(/[\.\?]$/, '').trim(); 
+            
+            if (restClean) {
+                const restWords = restClean.split(/\s+/);
+                tokens.push(...restWords); 
+            }
+
+            // 5. PUNCTUATION (A question mark)
+            tokens.push("?"); 
+            return tokens;
+        }
+
+
+        function generatePractice(topic, auxForm) {
+            const questions = sentenceData[topic].filter(q => q.aux.toLowerCase() === auxForm.toLowerCase());
+            
+            if (!questions || questions.length === 0) return;
+
+            // Cycle through questions for the selected Aux form
+            currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
+            const item = questions[currentQuestionIndex];
+            
+            currentWords = tokenizeSentence(item);
+            nextSlotIndex = 0; 
+
+            // Find the color associated with the selected auxiliary button
+            const auxConfig = auxiliaryMap[topic].find(a => a.form.toLowerCase() === auxForm.toLowerCase());
+            const auxColorClass = auxConfig ? auxConfig.color : 'bg-aux-color';
+
+            // 1. Display Affirmative Sentence
+            affSentence.innerHTML = `
+                <div class="affirmative-blocks flex flex-wrap gap-2 text-xl font-bold">
+                    <div class="p-2 rounded-md bg-gray-800 text-white">${item.statement}</div>
+                </div>
+            `;
+            affSentence.classList.add('bg-gray-900'); 
+            affSentence.classList.remove('bg-gray-700');
+            
+            // 2. Clear areas
+            sentenceInputArea.innerHTML = '';
+            scrambledWordsDiv.innerHTML = '';
+            feedbackDiv.classList.add('hidden');
+            solutionDiv.classList.add('hidden');
+            checkButton.disabled = true;
+            nextButton.disabled = true;
+
+            // 3. Create target slots with labels (Dynamic number of slots)
+            currentWords.forEach((word, index) => {
+                const slot = document.createElement('div');
+                let role, label;
+
+                if (index === 0) { 
+                    role = 'wh'; label = '1. WH-WORD'; 
+                } else if (index === 1) { 
+                    role = 'aux'; label = '2. AUX/BE/DO'; 
+                } else if (index === 2) { 
+                    role = 'subj'; label = '3. SUJEITO';
+                } else if (index === currentWords.length - 1) { 
+                    role = 'punct'; label = 'INTERROGAÇÃO (?)'; 
+                } else {
+                    role = 'rest'; label = '4+. RESTO'; 
+                }
+
+
+                slot.className = 'target-slot text-sm flex-grow'; 
+                slot.dataset.slotIndex = index;
+                slot.dataset.role = role;
+                
+                const labelElement = document.createElement('span');
+                labelElement.className = 'slot-label';
+                labelElement.textContent = label;
+                
+                slot.appendChild(labelElement);
+                sentenceInputArea.appendChild(slot);
+            });
+
+            // 4. Create scrambled word blocks 
+            const blocksToShuffle = currentWords.map((word, index) => ({ word, correctIndex: index }));
+            blocksToShuffle.sort(() => Math.random() - 0.5);
+
+            blocksToShuffle.forEach((item) => {
+                const block = document.createElement('div');
+                let className;
+                
+                if (item.correctIndex === 0) {
+                    className = 'wh-block'; // WH-WORD
+                } else if (item.correctIndex === 1) {
+                    // AUX/BE/DO
+                    className = auxColorClass + ' text-white'; 
+                } else if (item.correctIndex === 2) {
+                    className = 'subject-block'; // SUBJECT
+                } else if (item.correctIndex === currentWords.length - 1) {
+                    className = 'bg-gray-700 text-white'; // Punctuation
+                } else { 
+                    className = 'rest-block'; // RESTO (every other word)
+                }
+
+
+                block.className = `lego-block ${className}`;
+                // Capitalize the first word (WH-Word)
+                block.textContent = item.correctIndex === 0 ? item.word.charAt(0).toUpperCase() + item.word.slice(1) : item.word;
+                block.dataset.correctIndex = item.correctIndex; 
+                block.setAttribute('draggable', 'false'); 
+                
+                block.addEventListener('dragstart', handleDragStart);
+                block.addEventListener('dragend', handleDragEnd);
+                block.addEventListener('click', handleBlockClick); 
+                
+                scrambledWordsDiv.appendChild(block);
+            });
+            
+            updateActiveSlot();
+
+            practiceTargetArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // --- Verification and Feedback ---
+
+        function checkAnswer() {
+            let userAnswerWords = [];
+            sentenceInputArea.querySelectorAll('.target-slot').forEach(slot => {
+                const block = slot.querySelector('.lego-block');
+                if (block) {
+                    userAnswerWords.push(block.textContent.trim());
+                }
+            });
+
+            // Correctly join the array back into a sentence string (handling the space before '?')
+            const userAnswer = userAnswerWords.join(' ').replace(/\s+\?$/, '?').trim();
+            const correctSentence = currentWords.join(' ').replace(/\s+\?$/, '?').trim();
+            
+            if (userAnswer === correctSentence) {
+                feedbackDiv.textContent = `🎉 EXCELENTE! Você acertou a regra da **WH-Question** e a inversão!`;
+                feedbackDiv.className = 'feedback success';
+                nextButton.disabled = false;
+                checkButton.disabled = true;
+            } else {
+                feedbackDiv.textContent = `❌ OPS! Lembre-se: O Auxiliar (${currentAuxForm || 'Aux'}) deve vir **antes** do Sujeito. Revise a ordem!`;
+                feedbackDiv.className = 'feedback error';
+                nextButton.disabled = true;
+                
+                solutionDiv.classList.remove('hidden');
+                solutionText.textContent = correctSentence;
+            }
+            feedbackDiv.classList.remove('hidden');
+        }
+
+        // --- UI Control Functions ---
+
+        function updateAuxSelector(topic) {
+            auxSelectorDiv.innerHTML = '';
+            if (auxiliaryMap[topic]) {
+                auxiliaryMap[topic].forEach(aux => {
+                    const button = document.createElement('button');
+                    const displayForm = aux.form.charAt(0).toUpperCase() + aux.form.slice(1);
+                    button.textContent = displayForm;
+                    button.dataset.aux = aux.form;
+                    button.dataset.topic = topic;
+                    
+                    const baseClass = 'text-white';
+
+                    button.className = `p-3 rounded-lg font-bold text-sm bg-gray-700 hover:${aux.color} transition-colors ${baseClass}`;
+                    button.addEventListener('click', handleAuxClick);
+                    auxSelectorDiv.appendChild(button);
+                });
+            }
+        }
+        
+        function handleTopicClick(e) {
+            topicButtons.forEach(btn => btn.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            
+            currentTopic = e.currentTarget.dataset.topic;
+            currentAuxForm = null; 
+            currentQuestionIndex = -1;
+
+            // Clear display areas
+            affSentence.textContent = 'Selecione um Auxiliar abaixo para gerar uma frase.';
+            sentenceInputArea.innerHTML = '';
+            scrambledWordsDiv.innerHTML = '';
+            feedbackDiv.classList.add('hidden');
+            solutionDiv.classList.add('hidden');
+            checkButton.disabled = true;
+            nextButton.disabled = true;
+
+            updateAuxSelector(currentTopic);
+        }
+
+        function handleAuxClick(e) {
+            const auxForm = e.currentTarget.dataset.aux; 
+            
+            // Remove all custom colors before adding the new one
+            document.querySelectorAll('#aux-selector button').forEach(btn => {
+                btn.classList.remove('bg-perfect-color', 'bg-simple-past-color');
+                btn.classList.add('bg-gray-700');
+            });
+            
+            const auxConfig = auxiliaryMap[currentTopic].find(a => a.form.toLowerCase() === auxForm.toLowerCase());
+            if (auxConfig) {
+                e.currentTarget.classList.remove('bg-gray-700');
+                e.currentTarget.classList.add(auxConfig.color);
+            }
+
+            if (auxForm) {
+                if (currentAuxForm !== auxForm) {
+                    currentQuestionIndex = -1;
+                    currentAuxForm = auxForm;
+                }
+                
+                generatePractice(currentTopic, auxForm);
+            }
+        }
+        
+        // --- Initialization Function ---
+        const initApp = () => {
+            topicButtons.forEach(button => button.addEventListener('click', handleTopicClick));
+            checkButton.addEventListener('click', checkAnswer);
+            
+            nextButton.addEventListener('click', () => {
+                if (currentTopic && currentAuxForm) {
+                    generatePractice(currentTopic, currentAuxForm);
+                }
+            });
+
+            // Initial state: Select Present Perfect to begin
+            const initialTopicButton = document.querySelector('button[data-topic="perfect"]');
+            if (initialTopicButton) {
+                handleTopicClick({ currentTarget: initialTopicButton });
+                const firstAuxButton = auxSelectorDiv.querySelector('button[data-aux="have"]');
+                if (firstAuxButton) {
+                    handleAuxClick({ currentTarget: firstAuxButton });
+                }
+            }
+        };
+
+        window.onload = () => initializeFirebase(initApp);
+
+    </script>
+</body>
+</html>
